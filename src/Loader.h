@@ -1,28 +1,18 @@
+#pragma once
+
 #include <string>
 #include "Node.h"
+#include "Item.h"
+#include "GADataContainer.h"
 
 using namespace std;
 
-
-#ifndef METAHEURISTICS_LOADER_H
-#define METAHEURISTICS_LOADER_H
-
-
 class Loader {
 public:
-    static void Load(string path);
+    static GADataContainer Load(string path);
     static float getParam(string line);
     static Node parseNode(string line);
+    static int parseFloat(string s);
+    static int parseInt(string s);
+    static Item parseItem(string line);
 };
-
-
-#endif //METAHEURISTICS_LOADER_H
-
-
-
-
-
-
-
-
-

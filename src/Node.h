@@ -1,10 +1,8 @@
-//
-// Created by User on 10/8/2018.
-//
+#pragma once
 
-#ifndef METAHEURISTICS_NODE_H
-#define METAHEURISTICS_NODE_H
-
+#include <string>
+#include <iostream>
+using namespace std;
 
 class Node
 {
@@ -12,10 +10,9 @@ private:
     int x, y;
 public:
     Node(int x, int y);
-    int getX() { return x; }
-    int getY() { return y; }
+    int getX() const;
+    int getY() const;
     bool operator==(const Node& n) const;
+    friend ostream& operator<<(ostream& os, const Node& n);
+
 };
-
-
-#endif //METAHEURISTICS_NODE_H

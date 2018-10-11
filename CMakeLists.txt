@@ -12,5 +12,5 @@ ENDIF()
 
 add_subdirectory(libs/googletest)
 include_directories(libs/googletest/include)
-add_executable(Metaheuristics main.cpp src/Loader.cpp src/Loader.h src/Node.cpp src/Node.h)
+add_executable(Metaheuristics main.cpp src/Loader.cpp src/Loader.h src/Node.cpp src/Node.h src/Item.cpp src/Item.h src/GA.cpp src/GA.h src/GADataContainer.h src/Individual.h)
 target_link_libraries(Metaheuristics gtest gtest_main)
