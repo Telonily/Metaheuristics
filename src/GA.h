@@ -14,4 +14,6 @@ public:
     float fitness(Individual i);
     float tspFitness(vector<int> tsp);
     static float getDistance(Node n1, Node n2);
+
+    void startTspGa();
 };

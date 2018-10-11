@@ -1,5 +1,6 @@
 #include "GA.h"
 #include "Loader.h"
+#include "TspGA.h"
 
 #include <math.h>
 
@@ -25,5 +26,12 @@ float GA::getDistance(Node n1, Node n2) {
 
     return sqrt (pow( (x2-x1), 2 ) + pow ( (y2-y1), 2 ));
 }
+
+void GA::startTspGa() {
+    TspGA tspGA(data.nodes);
+    tspGA.start(1);
+}
+
+
 
 

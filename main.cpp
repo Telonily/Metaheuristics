@@ -16,14 +16,15 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-//    testing::InitGoogleTest(&argc, argv);
-//    RUN_ALL_TESTS();
+    //testing::InitGoogleTest(&argc, argv);
+    //RUN_ALL_TESTS();
 
     GA ga;
     ga.loadData("../ttp_student/trivial_0.ttp");
     printf("Dimensions: %d, Items: %d, Knapsack Capacity: %d, Min Speed: %.2f, Max Speed: %.2f, Renting ratio: %.2f\n",
             ga.data.nodesCount, ga.data.itemsCount, ga.data.knapsackCapacity, ga.data.minSpeed, ga.data.maxSpeed, ga.data.rentRatio);
 
+    ga.startTspGa();
 
 
     return 1;
@@ -34,7 +35,7 @@ int main(int argc, char *argv[])
 
 
 
-TEST(BasicTest, TestName) {
+TEST(Tests, Test) {
     Node n(2,3);
     ASSERT_EQ(Loader::parseNode("1\t2\t3"), n);
 
