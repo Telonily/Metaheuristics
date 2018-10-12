@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     printf("Dimensions: %d, Items: %d, Knapsack Capacity: %d, Min Speed: %.2f, Max Speed: %.2f, Renting ratio: %.2f\n",
             ga.data.nodesCount, ga.data.itemsCount, ga.data.knapsackCapacity, ga.data.minSpeed, ga.data.maxSpeed, ga.data.rentRatio);
 
-    ga.startTspGa();
+    ga.start(1);
 
 
     return 1;

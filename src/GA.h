@@ -11,9 +11,11 @@ class GA {
 public:
     GADataContainer data;
     void loadData(string path);
-    float fitness(Individual i);
-    float tspFitness(vector<int> tsp);
-    static float getDistance(Node n1, Node n2);
+    float calcFitness(Individual i);
+    float **distances;
 
-    void startTspGa();
+    static float getDistance(Node n1, Node n2);
+    void start(int sec);
+    Individual generateGenome();
+
 };
