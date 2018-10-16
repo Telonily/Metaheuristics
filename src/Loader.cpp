@@ -107,7 +107,7 @@ Item Loader::parseItem(string line)
     int id = parseInt(splitString[0]);
     int profit = parseInt(splitString[1]);
     int weight = parseInt(splitString[2]);
-    int assignedNode = parseInt(splitString[3]);
+    int assignedNode = parseInt(splitString[3])-1;
     Item item(profit, weight, assignedNode);
     return item;
 }

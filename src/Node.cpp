@@ -26,3 +26,4 @@ int Node::getX() const {
 int Node::getY() const {
     return y;
 }
+
