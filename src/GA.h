@@ -21,6 +21,7 @@ public:
     void mutate(Individual *individual);
     void cross(Individual* ind1, Individual* ind2);
     Individual* select();
+    int getRandom(int lim1, int lim2);
 
 
 };

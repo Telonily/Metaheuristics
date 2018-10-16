@@ -15,15 +15,15 @@ int tournamentSize = 4;
 vector<int> *locations;
 float x; // (maxSpeed - minSpeed) / knapsackCapacity
 
+std::mt19937 engine(time(0));
 
 void GA::start(int sec)
 {
-
     Individual ind1 = GA::generateGenome();
     Individual ind2 = GA::generateGenome();
     GA::cross(&ind1, &ind2);
 
-
+/*
     Individual gen = GA::generateGenome();
     //GA::generateKnp(&gen);
     printf("Fitness: %.2f\n", GA::calcFitness(&gen));
@@ -43,10 +43,8 @@ void GA::start(int sec)
     {
 
     }
+*/
 }
-
-
-
 void GA::loadData(string path) {
     data = Loader::Load(path);
     int nodesCount = data.nodes.size();
@@ -133,8 +131,6 @@ float GA::getDistance(Node n1, Node n2) {
     return sqrt (pow( (x2-x1), 2 ) + pow ( (y2-y1), 2 ));
 }
 
-
-auto rng = std::default_random_engine {};
 Individual GA::generateGenome()
 {
     int nodesCount = data.nodes.size();
@@ -143,11 +139,10 @@ Individual GA::generateGenome()
     {
         genome[i] = i;
     }
-    std::shuffle(std::begin(genome)+1, std::end(genome), rng);
+    std::shuffle(std::begin(genome), std::end(genome), engine);
     Individual i(genome);
     return i;
 }
-
 
 //TODO: Make this more clever
 void GA::generateKnp(Individual* individual) {
@@ -188,17 +183,14 @@ void GA::mutate(Individual *individual) {
     iter_swap(beginIter+index1, beginIter+index2);
 }
 
+// OX crossing operator
 void GA::cross(Individual* ind1, Individual* ind2)
 {
-    int pivot = rand() % data.nodesCount;
-    swap_ranges(ind1->tsp.begin(), ind1->tsp.end()-pivot, ind2->tsp.begin());
-
-    srand(time(nullptr));
-
-    int child[data.nodesCount];
+    int child1[data.nodesCount];
+    int child2[data.nodesCount];
     int half = data.nodesCount/2;
-    int index1 = rand() % (half);
-    int index2 = rand() % half+index1;
+    int index1 = getRandom(1, half);
+    int index2 = getRandom(half, data.nodesCount-2);
 
     printf("index1: %d index2: %d\n", index1, index2);
 
@@ -208,25 +200,33 @@ void GA::cross(Individual* ind1, Individual* ind2)
     for (int i = index1; i < index2; i++)
     {
         int t = ind2->tsp[i];
-        child[i] = t;
-        used[t] = 1;
+        child1[i] = t;
+        used[t] = true;
     }
 
-    for (int i = 0; i < index1; i++)
+    int currentPos = index2;
+    for (int i = index2; i < data.nodesCount;)
     {
-        int firstCase = ind1->tsp[i];
-        int next = used[firstCase] ? ind2->tsp[i] : firstCase;
-        child[i] = next;
-        used[next] = 1;
+        currentPos = (currentPos == data.nodesCount) ? 0 : currentPos;
+        if ( !used[ind1->tsp[currentPos]] )
+        {
+            child1[i] = ind1->tsp[currentPos];
+            i++;
+        }
+        currentPos++;
     }
 
-    for (int i = index2; i < data.nodesCount; i++)
+    for (int i = 0; i < index1;)
     {
-        int firstCase = ind1->tsp[i];
-        int next = used[firstCase] ? ind2->tsp[i] : firstCase;
-        child[i] = next;
-        used[next] = 1;
+        currentPos = (currentPos == data.nodesCount) ? 0 : currentPos;
+        if ( !used[ind1->tsp[currentPos]] )
+        {
+            child1[i] = ind1->tsp[currentPos];
+            i++;
+        }
+        currentPos++;
     }
+
 
 
     for (int i = 0; i < data.nodesCount; i++)
@@ -243,7 +243,7 @@ void GA::cross(Individual* ind1, Individual* ind2)
 
     for (int i = 0; i < data.nodesCount; i++)
     {
-        printf("%d ", child[i]);
+        printf("%d ", child1[i]);
     }
     printf("\n");
 
@@ -260,6 +260,11 @@ Individual* GA::select()
         }
     }
     return &pop[best];
+}
+
+int GA::getRandom(int lim1, int lim2) {
+    std::uniform_int_distribution<int> distribution(lim1, lim2);
+    return distribution(engine);
 }
 
 
