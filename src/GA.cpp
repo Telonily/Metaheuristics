@@ -10,7 +10,7 @@
 vector<Individual*> pop;
 vector<Individual*> nextPop;
 int popSize = 10;
-int tournamentSize = 1;
+int tournamentSize = 2;
 float proportion = 0.5;
 
 vector<int> *locations;
@@ -20,14 +20,6 @@ std::mt19937 engine(time(0));
 
 void GA::start(int sec)
 {
-    /*
-    Individual* i1 = generateGenome();
-    Individual* i2 = generateGenome();
-    auto res = cross(i1,i2);
-    calcFitness(res);
-    printIndividual(res);
-     */
-
     time_t endTime = time(nullptr)+sec;
 
     // Generate population and calculate fitness
@@ -47,16 +39,16 @@ void GA::start(int sec)
     calcFitness(res);
     printIndividual( res );
 
-/*
+
 //    while ( time(nullptr) < endTime )
-    for ( int ccc = 0; ccc < 1; ccc++ ) //TODO: Test, not for production
+    for ( int ccc = 0; ccc < 3; ccc++ ) //TODO: Test, not for production
     {
-//        for (int i = 0; i < int(popSize*proportion); i++)
-//        {
-//            Individual* ind = select();
-//            nextPop.push_back(*ind);
-//            //delete(ind); //TODO: Delete
-//        }
+        for (int i = 0; i < int(popSize*proportion); i++)
+        {
+            Individual* ind = select();
+            nextPop.push_back(ind);
+            //delete(ind); //TODO: Delete
+        }
 
         int limit = popSize-nextPop.size();
         for (int i = 0; i < limit; i++)
@@ -67,11 +59,17 @@ void GA::start(int sec)
             calcFitness(iii);
             nextPop.push_back(iii);
         }
+
+        printf("\n==========NEXT POP==========\n");
+        showPop(&nextPop);
+
+        pop.clear();
+        pop.assign(nextPop.begin(), nextPop.end());
+        nextPop.erase(nextPop.begin(), nextPop.end());
     }
 
-    printf("\n==========NEXT POP==========\n");
-    showPop(&nextPop);
-*/
+
+
 }
 void GA::loadData(string path) {
     data = Loader::Load(path);
@@ -283,14 +281,16 @@ Individual* GA::cross(Individual* ind1, Individual* ind2)
 
 Individual* GA::select()
 {
-    int best = getRandom(0, popSize);
+    int best = getRandom(0, popSize-1);
     for (int i = 0; i < tournamentSize-1; i++)
     {
-        if (pop[getRandom(0, popSize)]->fitness > pop[best]->fitness)
+        int rnd = getRandom(0, popSize-1);
+        if (pop[rnd]->fitness > pop[best]->fitness)
         {
             best = i;
         }
     }
+    int temp = pop[best]->tsp->at(2);
     return pop[best];
 }
 

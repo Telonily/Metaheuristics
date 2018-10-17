@@ -13,6 +13,11 @@ public:
     }
 
     Individual(std::vector<int>* tsp) : tsp(tsp) {}
+
+    virtual ~Individual() {
+        delete(tsp);
+        delete(kp);
+    }
 };
 
 
