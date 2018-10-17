@@ -16,12 +16,12 @@ public:
 
     static float getDistance(Node n1, Node n2);
     void start(int sec);
-    Individual generateGenome();
+    Individual* generateGenome();
     void generateKnp(Individual* individual);
     void mutate(Individual *individual);
-    void cross(Individual* ind1, Individual* ind2);
+    Individual* cross(Individual* ind1, Individual* ind2);
     Individual* select();
     int getRandom(int lim1, int lim2);
-
-
+    void showPop(vector<Individual*>* pop);
+    void printIndividual(Individual* ind);
 };

@@ -7,10 +7,11 @@
 #include <algorithm>
 #include <set>
 
-vector<Individual> pop;
-vector<Individual> nextPop;
+vector<Individual*> pop;
+vector<Individual*> nextPop;
 int popSize = 10;
-int tournamentSize = 4;
+int tournamentSize = 1;
+float proportion = 0.5;
 
 vector<int> *locations;
 float x; // (maxSpeed - minSpeed) / knapsackCapacity
@@ -19,30 +20,57 @@ std::mt19937 engine(time(0));
 
 void GA::start(int sec)
 {
-    Individual ind1 = GA::generateGenome();
-    Individual ind2 = GA::generateGenome();
-    GA::cross(&ind1, &ind2);
-
-/*
-    Individual gen = GA::generateGenome();
-    //GA::generateKnp(&gen);
-    printf("Fitness: %.2f\n", GA::calcFitness(&gen));
+    /*
+    Individual* i1 = generateGenome();
+    Individual* i2 = generateGenome();
+    auto res = cross(i1,i2);
+    calcFitness(res);
+    printIndividual(res);
+     */
 
     time_t endTime = time(nullptr)+sec;
 
     // Generate population and calculate fitness
     for (int i = 0; i < popSize; i++)
     {
-        Individual ind = GA::generateGenome();
-        GA::calcFitness(&ind);
+        Individual* ind = GA::generateGenome();
+        calcFitness(ind);
         pop.push_back(ind);
     }
 
-    //Starting GA
-    while ( time(nullptr) < endTime )
-    {
+    printf("==========POP==========\n");
+    showPop(&pop);
 
+    auto i1 = select();
+    auto i2 = select();
+    auto res = cross(i1, i2);
+    calcFitness(res);
+    printIndividual( res );
+
+/*
+//    while ( time(nullptr) < endTime )
+    for ( int ccc = 0; ccc < 1; ccc++ ) //TODO: Test, not for production
+    {
+//        for (int i = 0; i < int(popSize*proportion); i++)
+//        {
+//            Individual* ind = select();
+//            nextPop.push_back(*ind);
+//            //delete(ind); //TODO: Delete
+//        }
+
+        int limit = popSize-nextPop.size();
+        for (int i = 0; i < limit; i++)
+        {
+            Individual* ii1 = select();
+            Individual* ii2 = select();
+            Individual* iii = cross(ii1, ii2);
+            calcFitness(iii);
+            nextPop.push_back(iii);
+        }
     }
+
+    printf("\n==========NEXT POP==========\n");
+    showPop(&nextPop);
 */
 }
 void GA::loadData(string path) {
@@ -94,9 +122,9 @@ void GA::loadData(string path) {
 
 float GA::calcFitness(Individual* individual) {
 
-    vector<int> route = individual->tsp;
+    vector<int> route = *individual->tsp;
     GA::generateKnp(individual);
-    vector<int> knp = individual->kp;
+    vector<int> knp = *individual->kp;
     float speed = 1;
     float kWeight = 0;
     float tripTime = 0;
@@ -131,22 +159,21 @@ float GA::getDistance(Node n1, Node n2) {
     return sqrt (pow( (x2-x1), 2 ) + pow ( (y2-y1), 2 ));
 }
 
-Individual GA::generateGenome()
+Individual* GA::generateGenome()
 {
-    int nodesCount = data.nodes.size();
-    vector<int>genome(nodesCount);
-    for (int i = 0; i < nodesCount; i++)
+    vector<int>* genome = new vector<int>();
+    for (int i = 0; i < data.nodesCount; i++)
     {
-        genome[i] = i;
+        genome->push_back(i);
     }
-    std::shuffle(std::begin(genome), std::end(genome), engine);
-    Individual i(genome);
+    std::shuffle(std::begin(*genome), std::end(*genome), engine);
+    auto i = new Individual(genome);
     return i;
 }
 
 //TODO: Make this more clever
 void GA::generateKnp(Individual* individual) {
-    vector<int> knp(data.itemsCount);
+    vector<int>* knp = new vector<int>(data.itemsCount);
     int limit = data.knapsackCapacity;
     int currentWeight = 0;
     for (int i = 0; i < data.itemsCount; i++)
@@ -154,10 +181,10 @@ void GA::generateKnp(Individual* individual) {
         Item item = data.items[i];
         if ( currentWeight + item.getWeight() > limit)
         {
-            knp[i] = -1;
+            knp->at(i) = -1;
         } else /*if (rand()%2 == 1)*/
         {
-            knp[i] = data.items[i].getAssignedNode();
+            knp->at(i) = data.items[i].getAssignedNode();
             currentWeight += item.getWeight();
         }
     }
@@ -179,27 +206,26 @@ void GA::mutate(Individual *individual) {
     int nodesCount = data.nodesCount;
     int index1 = rand() % nodesCount;
     int index2 = rand() % nodesCount;
-    auto beginIter = individual->tsp.begin();
+    auto beginIter = individual->tsp->begin();
     iter_swap(beginIter+index1, beginIter+index2);
 }
 
 // OX crossing operator
-void GA::cross(Individual* ind1, Individual* ind2)
+Individual* GA::cross(Individual* ind1, Individual* ind2)
 {
     int child1[data.nodesCount];
     int child2[data.nodesCount];
     int half = data.nodesCount/2;
     int index1 = getRandom(1, half);
     int index2 = getRandom(half, data.nodesCount-2);
-
-    printf("index1: %d index2: %d\n", index1, index2);
-
     bool used[data.nodesCount];
     fill_n(used, data.nodesCount, 0);
 
+
+
     for (int i = index1; i < index2; i++)
     {
-        int t = ind2->tsp[i];
+        int t = ind2->tsp->at(i);
         child1[i] = t;
         used[t] = true;
     }
@@ -208,9 +234,10 @@ void GA::cross(Individual* ind1, Individual* ind2)
     for (int i = index2; i < data.nodesCount;)
     {
         currentPos = (currentPos == data.nodesCount) ? 0 : currentPos;
-        if ( !used[ind1->tsp[currentPos]] )
+        int o = ind1->tsp->at(currentPos);
+        if ( !used[o] )
         {
-            child1[i] = ind1->tsp[currentPos];
+            child1[i] = ind1->tsp->at(currentPos);
             i++;
         }
         currentPos++;
@@ -219,16 +246,16 @@ void GA::cross(Individual* ind1, Individual* ind2)
     for (int i = 0; i < index1;)
     {
         currentPos = (currentPos == data.nodesCount) ? 0 : currentPos;
-        if ( !used[ind1->tsp[currentPos]] )
+        if ( !used[ind1->tsp->at(currentPos)] )
         {
-            child1[i] = ind1->tsp[currentPos];
+            child1[i] = ind1->tsp->at(currentPos);
             i++;
         }
         currentPos++;
     }
 
 
-
+/* for debug
     for (int i = 0; i < data.nodesCount; i++)
     {
         printf("%d ", ind1->tsp[i]);
@@ -247,19 +274,24 @@ void GA::cross(Individual* ind1, Individual* ind2)
     }
     printf("\n");
 
+*/
+
+    vector<int>* res = new vector<int> (child1, child1+( sizeof(child1) / sizeof(child1[0])) );
+    auto ind = new Individual(res);
+    return ind;
 }
 
 Individual* GA::select()
 {
-    int best = rand() % popSize;
+    int best = getRandom(0, popSize);
     for (int i = 0; i < tournamentSize-1; i++)
     {
-        if (pop[rand() % popSize].fitness > pop[best].fitness)
+        if (pop[getRandom(0, popSize)]->fitness > pop[best]->fitness)
         {
             best = i;
         }
     }
-    return &pop[best];
+    return pop[best];
 }
 
 int GA::getRandom(int lim1, int lim2) {
@@ -267,7 +299,29 @@ int GA::getRandom(int lim1, int lim2) {
     return distribution(engine);
 }
 
+void GA::showPop(vector<Individual*> *pop) {
+    for (auto i = pop->begin(); i < pop->end(); i++)
+    {
+        auto ind = *i;
+        printIndividual(ind);
+    }
+}
 
+void GA::printIndividual(Individual *ind) {
+    for (auto it = ind->tsp->begin(); it < ind->tsp->end(); it++)
+    {
+        printf("%d ", *it);
+    }
+    printf(" | ");
+
+    for (auto it = ind->kp->begin(); it < ind->kp->end(); it++)
+    {
+        printf("%d ", *it);
+    }
+
+    printf(" | ");
+    printf("%.2f\n", ind->fitness);
+}
 
 
 
