@@ -21,7 +21,8 @@ public:
     void mutate(Individual *individual);
     Individual* cross(Individual* ind1, Individual* ind2);
     Individual* select();
-    int getRandom(int lim1, int lim2);
+    int getRandomInt(int lim1, int lim2);
     void showPop(vector<Individual*>* pop);
     void printIndividual(Individual* ind);
+    float getRandomFloat(float lim1, float lim2);
 };

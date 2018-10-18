@@ -22,11 +22,13 @@ int main(int argc, char *argv[])
 
 
     GA ga;
-    ga.loadData("../ttp_student/trivial_0.ttp");
-//    ga.loadData("../ttp_student/hard_2.ttp");
+    ga.loadData("../ttp_student/hard_1.ttp");
+
     printf("Dimensions: %d, Items: %d, Knapsack Capacity: %d, Min Speed: %.2f, Max Speed: %.2f, Renting ratio: %.2f\n",
             ga.data.nodesCount, ga.data.itemsCount, ga.data.knapsackCapacity, ga.data.minSpeed, ga.data.maxSpeed, ga.data.rentRatio);
-    ga.start(3);
+
+    ga.start(10);
+
     return 1;
 }
 
