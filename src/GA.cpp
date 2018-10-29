@@ -1,18 +1,29 @@
 #include "GA.h"
 #include "Loader.h"
+#include "TabuList.h"
 
 #include <math.h>
 #include <random>
 #include <ctime>
 #include <algorithm>
 #include <set>
+#include <fstream>
+#include <queue>
+#include <list>
+#include <boost/format.hpp>
+
+string file = "medium_0";
 
 vector<Individual*> pop;
 vector<Individual*> nextPop;
 int popSize = 100;
-int tournamentSize = 2;
-float proportion = 0.45;
-float mutation_chance = 0.1;
+int tournamentSize = 3;
+float proportion = 0.4;
+float mutation_chance = 0.05;
+
+
+vector<int> locationsBest;
+vector<int> nonAcceptableItems;
 
 vector<int> *locations;
 float x; // (maxSpeed - minSpeed) / knapsackCapacity
@@ -21,9 +32,17 @@ std::mt19937 engine(time(0));
 
 //#define DEBUG
 
-void GA::start(int sec)
+
+void GA::start(bool isTime, int limitation)
 {
-    time_t endTime = time(nullptr)+sec;
+    ofstream statsFile;
+    string fileName = file+" "+to_string(popSize)+" "+to_string(tournamentSize)+" "+to_string(proportion)+" "+to_string(mutation_chance)+" "+to_string(time(nullptr))+".csv";
+    statsFile.open (fileName);
+
+    time_t endTime = time(nullptr)+limitation;
+
+
+    vector<bool> selected(popSize);
 
     // Generate population and calculate fitness
     for (int i = 0; i < popSize; i++)
@@ -33,12 +52,15 @@ void GA::start(int sec)
         pop.push_back(ind);
     }
 
-    while ( time(nullptr) < endTime )
+    int generationCount = 0;
+    while (time(nullptr) < endTime)
     {
         // Select in new population
         for (int i = 0; i < int(popSize*proportion); i++)
         {
-            Individual* ind = select();
+            int selectedIndex = select();
+            Individual* ind = pop[selectedIndex];
+            selected[selectedIndex] = true;
 
             #ifdef DEBUG
             printf("SELECTED: ");
@@ -46,8 +68,6 @@ void GA::start(int sec)
             printf("\n");
             #endif
 
-            mutate(ind);
-            calcFitness(ind);
             nextPop.push_back(ind);
         }
 
@@ -55,18 +75,39 @@ void GA::start(int sec)
         int limit = popSize-nextPop.size();
         for (int i = 0; i < limit; i++)
         {
-            Individual* ii1 = select();
+            Individual* ii1 = pop[select()];
             Individual* ii2;
-            do {ii2 = select();} while (ii1 == ii2);
+            do {ii2 = pop[select()];} while (ii1 == ii2);
             Individual* iii = cross(ii1, ii2);
-            mutate(iii);
             calcFitness(iii);
             nextPop.push_back(iii);
         }
 
+        for (int i = 0; i < popSize; i++)
+        {
+            if (getRandomFloat(0, 1) < mutation_chance)
+            {
+                mutate(nextPop[i]);
+            }
+            calcFitness(nextPop[i]);
+        }
+
         // Revert pop, nextPop. Clear nextPop
+        /*for (int i = 0; i < popSize; i++)
+        {
+            if (!selected[i])
+            {
+                delete(pop[i]);
+            }
+        }*/
         pop.clear();
         pop.assign(nextPop.begin(), nextPop.end());
+
+        for (int i = 0; i < popSize; i++)
+        {
+            pop.push_back(nextPop.at(i));
+        }
+
         nextPop.erase(nextPop.begin(), nextPop.end());
 
         #ifdef DEBUG
@@ -78,18 +119,33 @@ void GA::start(int sec)
         Individual* best = pop[0];
         Individual* worst = pop[0];
         float average = 0;
-        average += pop[0]->fitness;
+        average += pop[0]->getFitness();
 
         for (auto iter = pop.begin()+1; iter < pop.end(); iter++)
         {
             Individual* ind = *iter;
-            if (ind->fitness < best->fitness) {best = ind;}
-            if (ind->fitness > worst->fitness) {worst = ind;}
-            average += ind->fitness;
+            if (ind->getFitness() < best->getFitness()) {best = ind;}
+            if (ind->getFitness() > worst->getFitness()) {worst = ind;}
+            average += ind->getFitness();
         }
 
-        printf("%.2f %.2f %.2f\n", best->fitness, worst->fitness, average/pop.size());
+        //string output = boost::format("%.2f,%.2f,%.2f\n", best->getFitness(), worst->getFitness(), average/pop.size());
+        string output = to_string(int(best->getFitness()))+","+to_string(int(worst->getFitness()))+","+to_string(int(average/pop.size()))+"\n";
+        cout << output;
+        statsFile << output;
+        //printIndividual(best);
+
+        if (!isTime && ++generationCount == limitation )
+        {
+            //printIndividual(best);
+            break;
+        }
+
+
+
     }
+
+    statsFile.close();
 
 }
 
@@ -125,20 +181,80 @@ void GA::loadData(string path)
     }
 
     x = (data.maxSpeed - data.minSpeed) / data.knapsackCapacity;
+
+    locationsBest = vector<int>(data.nodesCount);
+    fill_n(locationsBest.begin(), locationsBest.size(), -1);
+
+    for (int i = 0; i < data.nodesCount; i++)
+    {
+        if (!locations[i].empty())
+        {
+            vector<int> itemsHere = locations[i];
+            int bestItemId = itemsHere[0];
+            for (auto iter = itemsHere.begin()+1; iter < itemsHere.end(); iter++)
+            {
+                if (data.items[*iter].getRatio() > data.items[bestItemId].getRatio())
+                {
+                    bestItemId = *iter;
+                }
+            }
+            locationsBest.at(i) = bestItemId;
+        }
+    }
+
+    vector<Item> bestItems;
+    for (int i = 0; i < locationsBest.size(); i++)
+    {
+        int itemIndex = locationsBest[i];
+        if (itemIndex > -1)
+        {
+            bestItems.push_back(data.items[itemIndex]);
+        }
+    }
+
+    sort(bestItems.begin(), bestItems.end());
+
+
+    for (int i = int(bestItems.size()*0.8); i < bestItems.size(); i++)
+    {
+        nonAcceptableItems.push_back(bestItems[i].getId());
+    }
+
+    /*
+    for (auto it = nonAcceptableItems.begin(); it < nonAcceptableItems.end(); it++)
+    {
+        cout << data.items[*it] << endl;
+    }
+     */
 }
 
+float GA::calcFitness2(Individual* individual)
+{
+    generateKnp(individual);
+    float fitness = 0;
+    int* route = individual->getTsp();
+    for (int i = 0; i < data.nodesCount-1; i++)
+    {
+        fitness += distances[route[i]][route[i+1]];
+    }
+    fitness += distances[route[data.nodesCount-1]][route[0]];
+    individual->setFitness(fitness);
+    return fitness;
+}
+
+//TODO: Repair
 float GA::calcFitness(Individual* individual)
 {
     generateKnp(individual);
+    int* route = individual->getTsp();
+    int* knp = individual->getKp();
 
-    vector<int> route = *individual->tsp;
-    vector<int> knp = *individual->kp;
-
-    float speed = 1;
+    float speed;
     float weight = 0;
     float tripTime = 0;
+    float value = 0;
 
-    for (int i = 0; i < route.size(); i++)
+    for (int i = 0; i < data.nodesCount; i++)
     {
         int currentNode = route[i];
         vector<int> itemsHere = locations[currentNode];
@@ -146,16 +262,22 @@ float GA::calcFitness(Individual* individual)
         {
             if (knp[itemsHere[j]] == currentNode)
             {
+                int itemId = itemsHere[j];
                 speed = data.maxSpeed - (weight * x);
-                int nextNode = (i == route.size()-1) ? route[0] : route[i+1];
+                int nextNode = (i == data.nodesCount-1) ? route[0] : route[i+1];
                 tripTime += distances[currentNode][nextNode] / speed;
+                float currentValue = data.items[itemId].getProfit();
+                value += currentValue;
             }
         }
     }
 
-    float profit = data.rentRatio * tripTime;
-    individual->fitness = profit;
-    return profit;
+    float cost = data.rentRatio * tripTime;
+    float fitness = cost-value;
+    individual->setFitness(fitness);
+    //printf("Fitness: %.2f\n", fitness);
+
+    return fitness;
 }
 
 float GA::getDistance(Node n1, Node n2)
@@ -169,19 +291,19 @@ float GA::getDistance(Node n1, Node n2)
 
 Individual* GA::generateGenome()
 {
-    auto genome = new vector<int>();
+    auto ind = new Individual(data.nodesCount, data.itemsCount);
+    auto genome = ind->getTsp();
     for (int i = 0; i < data.nodesCount; i++)
     {
-        genome->push_back(i);
+        genome[i] = i;
     }
-    std::shuffle(std::begin(*genome), std::end(*genome), engine);
-    auto i = new Individual(genome);
-    return i;
+    shuffle(&genome[0], &genome[data.nodesCount], engine);
+    return ind;
 }
 
-//TODO: Make this more clever
 void GA::generateKnp(Individual* individual)
 {
+    /*
     vector<int>* knp = new vector<int>(data.itemsCount);
     int limit = data.knapsackCapacity;
     int currentWeight = 0;
@@ -191,7 +313,51 @@ void GA::generateKnp(Individual* individual)
         if ( currentWeight + item.getWeight() > limit)
         {
             knp->at(i) = -1;
-        } else /*if (rand()%2 == 1)*/
+        } else
+        {
+            knp->at(i) = data.items[i].getAssignedNode();
+            currentWeight += item.getWeight();
+        }
+    }
+    individual->kp = knp;
+*/
+    int* knp = individual->getKp();
+    fill(&knp[0], &knp[data.itemsCount], -1);
+    int* route = individual->getTsp();
+    int limit = data.knapsackCapacity;
+    int currentWeight = 0;
+    for (int i = data.nodesCount-1; i > 0; i--)
+    {
+        int node = route[i];
+        if (locationsBest[node] != -1)
+        {
+            Item item = data.items[locationsBest[node]];
+            int itemId = item.getId();
+            if ( currentWeight + item.getWeight() > limit)
+            {
+                knp[itemId] = -1;
+            } else
+            {
+                knp[itemId] = item.getAssignedNode();
+                currentWeight += item.getWeight();
+            }
+        }
+    }
+}
+
+void GA::generateKnp2(Individual* individual)
+{
+/*
+    vector<int>* knp = new vector<int>(data.itemsCount);
+    int limit = data.knapsackCapacity;
+    int currentWeight = 0;
+    for (int i = 0; i < data.itemsCount; i++)
+    {
+        Item item = data.items[i];
+        if ( currentWeight + item.getWeight() > limit)
+        {
+            knp->at(i) = -1;
+        } else
         {
             knp->at(i) = data.items[i].getAssignedNode();
             currentWeight += item.getWeight();
@@ -199,42 +365,53 @@ void GA::generateKnp(Individual* individual)
     }
 
     individual->kp = knp;
-
-/*
-
-    for (int i = 0; i < data.itemsCount; i++)
-    {
-        cout << knp[i] << " ";
-    }
 */
 
 
+    int* knp = individual->getKp();
+    fill(&knp[0], &knp[data.itemsCount], -1);
+    int maxWeight = data.knapsackCapacity;
+    int currentWeight = 0;
+    int* route = individual->getTsp();
+    for (int i = data.nodesCount-1; i > 0; i--)
+    {
+        int currentNode = route[i];
+        int possibleItemId = locationsBest[currentNode];
+        int itemWeight = data.items[possibleItemId].getWeight();
+        if(possibleItemId < 0 || itemWeight+currentWeight>maxWeight ||  find(nonAcceptableItems.begin(), nonAcceptableItems.end(), possibleItemId) != nonAcceptableItems.end()) {
+
+        } else {
+            knp[possibleItemId] = currentNode;
+            currentWeight += itemWeight;
+        }
+    }
 }
 
 void GA::mutate(Individual *individual)
 {
-    if (getRandomFloat(0, 1) < mutation_chance)
-    {
-        int index1 = getRandomInt(0, data.nodesCount - 1);
-        int index2 = getRandomInt(0, data.nodesCount - 1);
-        auto beginIter = individual->tsp->begin();
-        iter_swap(beginIter+index1, beginIter+index2);
-    }
+    int index1 = getRandomInt(0, data.nodesCount - 1);
+    int index2 = getRandomInt(0, data.nodesCount - 1);
+    individual->swap(index1, index2);
 }
 
 // OX crossing operator
 Individual* GA::cross(Individual* ind1, Individual* ind2)
 {
-    int child1[data.nodesCount];
+    auto ind = new Individual(data.nodesCount, data.itemsCount);
+    int* child1 = ind->getTsp();
     int half = data.nodesCount/2;
     int index1 = getRandomInt(1, half);
     int index2 = getRandomInt(half, data.nodesCount - 2);
     bool used[data.nodesCount];
     fill_n(used, data.nodesCount, 0);
 
+    int* ind1tsp = ind1->getTsp();
+    int* ind2tsp = ind2->getTsp();
+
+
     for (int i = index1; i < index2; i++)
     {
-        int t = ind2->tsp->at(i);
+        int t = ind2tsp[i];
         child1[i] = t;
         used[t] = true;
     }
@@ -243,10 +420,9 @@ Individual* GA::cross(Individual* ind1, Individual* ind2)
     for (int i = index2; i < data.nodesCount;)
     {
         currentPos = (currentPos == data.nodesCount) ? 0 : currentPos;
-        int o = ind1->tsp->at(currentPos);
-        if ( !used[o] )
+        if ( !used[ind1tsp[currentPos]] )
         {
-            child1[i] = ind1->tsp->at(currentPos);
+            child1[i] = ind1tsp[currentPos];
             i++;
         }
         currentPos++;
@@ -255,31 +431,29 @@ Individual* GA::cross(Individual* ind1, Individual* ind2)
     for (int i = 0; i < index1;)
     {
         currentPos = (currentPos == data.nodesCount) ? 0 : currentPos;
-        if ( !used[ind1->tsp->at(currentPos)] )
+        if ( !used[ind1tsp[currentPos]] )
         {
-            child1[i] = ind1->tsp->at(currentPos);
+            child1[i] = ind1tsp[currentPos];
             i++;
         }
         currentPos++;
     }
 
-    vector<int>* res = new vector<int> (child1, child1+( sizeof(child1) / sizeof(child1[0])) );
-    auto ind = new Individual(res);
     return ind;
 }
 
-Individual* GA::select()
+int GA::select()
 {
     int best = getRandomInt(0, popSize - 1);
     for (int i = 0; i < tournamentSize-1; i++)
     {
         int rnd = getRandomInt(0, popSize - 1);
-        if (pop[rnd]->fitness < pop[best]->fitness)
+        if (pop[rnd]->getFitness() < pop[best]->getFitness())
         {
             best = rnd;
         }
     }
-    return pop[best];
+    return best;
 }
 
 
@@ -309,21 +483,79 @@ void GA::showPop(vector<Individual*> *pop)
 
 void GA::printIndividual(Individual *ind)
 {
-    for (auto it = ind->tsp->begin(); it < ind->tsp->end(); it++)
+    int* tsp = ind->getTsp();
+    for (int i = 0; i < data.nodesCount; i++)
     {
-        printf("%d ", *it);
+        printf("%d ", tsp[i]);
     }
     printf(" | ");
 
-    for (auto it = ind->kp->begin(); it < ind->kp->end(); it++)
+    int* knp = ind->getKp();
+    for (int i = 0; i < data.itemsCount; i++)
     {
-        printf("%d ", *it);
+        printf("%d ", knp[i]);
     }
 
     printf(" | ");
-    printf("%.2f", ind->fitness);
+    printf("%.2f", ind->getFitness());
     printf(" | %p", ind);
 }
+
+void GA::startTabu(int tabuSize, int neighbours, int generations) {
+    TabuList tabuList(tabuSize);
+    Individual* current = generateGenome();
+    calcFitness(current);
+    Individual* best = current;
+
+    for (int i = 0; i < generations; i++)
+    {
+        for (int jj = 0; jj < neighbours; jj++)
+        {
+            Individual* neighbour = getNeighbour(current);
+
+            if (!tabuList.contains(neighbour) && neighbour->getFitness() < current->getFitness())
+            {
+                current = neighbour;
+            }
+        }
+
+        if (current->getFitness() < best->getFitness())
+            best = current;
+
+        if (!tabuList.contains(current))
+            tabuList.add(current);
+
+        printf("%.2f\n", best->getFitness());
+
+        /*
+        printf("TABU ITER %d\n", i);
+        tabuList.print();
+        printf("\n");
+         */
+    }
+
+
+}
+
+Individual* GA::getNeighbour(Individual* ind) {
+    auto res = new Individual(*ind);
+    mutate(res);
+    calcFitness(res);
+    return res;
+}
+
+GA::GA() {
+    loadData("../ttp_student/"+file+".ttp");
+
+    printf("Dimensions: %d, Items: %d, Knapsack Capacity: %d, Min Speed: %.2f, Max Speed: %.2f, Renting ratio: %.2f\n",
+           data.nodesCount, data.itemsCount, data.knapsackCapacity, data.minSpeed, data.maxSpeed, data.rentRatio);
+}
+
+
+
+// todo ARRAY CIRCLE QUEUE
+
+
 
 
 

@@ -4,7 +4,7 @@
 
 #include "Item.h"
 
-Item::Item(int profit, int weight, int assignedNode) : profit(profit), weight(weight), assignedNode(assignedNode) {}
+Item::Item(int profit, int weight, int assignedNode, int id) : profit(profit), weight(weight), assignedNode(assignedNode), id(id) {}
 
 int Item::getProfit() const {
     return profit;
@@ -26,4 +26,8 @@ int Item::getWeight() const {
 
 int Item::getAssignedNode() const {
     return assignedNode;
+}
+
+int Item::getId() const {
+    return id;
 }

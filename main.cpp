@@ -1,6 +1,7 @@
 #include "src/Loader.h"
 #include "src/Node.h"
 #include "src/GA.h"
+#include "src/TabuList.h"
 
 #include <iostream>
 #include <string>
@@ -20,14 +21,34 @@ int main(int argc, char *argv[])
     //testing::InitGoogleTest(&argc, argv);
     //RUN_ALL_TESTS();
 
+    /*
+    TabuList t(3);
+    auto i1 = new Individual(1, 1);
+    i1->getTsp()[0] = 99;
+    i1->getKp()[0] = 99;
+    auto i2 = new Individual(1, 1);
+    i2->getTsp()[0] = 88;
+    i2->getKp()[0] = 88;
+    auto i3 = new Individual(1, 1);
+    i3->getTsp()[0] = 77;
+    i3->getKp()[0] = 77;
+    auto i4 = new Individual(1, 1);
+    i4->getTsp()[0] = 66;
+    i4->getKp()[0] = 66;
+
+    t.add(i1);
+    t.add(i2);
+    t.add(i3);
+    t.add(i4);
+
+    bool exist3 = t.contains(i3);
+    bool exist1 = t.contains(i1);
+*/
+
 
     GA ga;
-    ga.loadData("../ttp_student/hard_1.ttp");
-
-    printf("Dimensions: %d, Items: %d, Knapsack Capacity: %d, Min Speed: %.2f, Max Speed: %.2f, Renting ratio: %.2f\n",
-            ga.data.nodesCount, ga.data.itemsCount, ga.data.knapsackCapacity, ga.data.minSpeed, ga.data.maxSpeed, ga.data.rentRatio);
-
-    ga.start(10);
+    ga.start(false, 100);
+    ga.startTabu(100, 5, 100);
 
     return 1;
 }
@@ -35,7 +56,7 @@ int main(int argc, char *argv[])
 
 
 
-
+/*
 
 TEST(Tests, Test) {
     Node n(2,3);
@@ -47,7 +68,8 @@ TEST(Tests, Test) {
 }
 
 TEST(BasicTest, ItemTest) {
-    Item item(1992,1792,7);
+    Item item(1992,1792,7,0);
     ASSERT_EQ(Loader::parseItem("6\t1992\t1792\t7"), item);
 }
 
+*/

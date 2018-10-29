@@ -13,6 +13,8 @@
 
 using namespace std;
 
+int itemId = 0;
+
 GADataContainer Loader::Load(string path)
 {
     string line;
@@ -108,7 +110,7 @@ Item Loader::parseItem(string line)
     int profit = parseInt(splitString[1]);
     int weight = parseInt(splitString[2]);
     int assignedNode = parseInt(splitString[3])-1;
-    Item item(profit, weight, assignedNode);
+    Item item(profit, weight, assignedNode, itemId++);
     return item;
 }
 
