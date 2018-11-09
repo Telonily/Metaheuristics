@@ -31,4 +31,5 @@ public:
     float getRandomFloat(float lim1, float lim2);
     void startTabu(int tabuSize, int neighbours, int generations);
     Individual* getNeighbour(Individual* ind);
+    void startAnealing(int neighbours, int generations);
 };

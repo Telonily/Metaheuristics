@@ -2,6 +2,7 @@
 #include "src/Node.h"
 #include "src/GA.h"
 #include "src/TabuList.h"
+#include "src/Logger.h"
 
 #include <iostream>
 #include <string>
@@ -47,8 +48,9 @@ int main(int argc, char *argv[])
 
 
     GA ga;
-    ga.start(false, 100);
-    ga.startTabu(100, 5, 100);
+    //ga.start(false, 1000);
+    //ga.startTabu(100, 3, 100);
+    ga.startAnealing(5, 0);
 
     return 1;
 }

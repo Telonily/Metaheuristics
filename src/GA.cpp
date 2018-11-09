@@ -1,6 +1,7 @@
 #include "GA.h"
 #include "Loader.h"
 #include "TabuList.h"
+#include "Logger.h"
 
 #include <math.h>
 #include <random>
@@ -12,7 +13,7 @@
 #include <list>
 #include <boost/format.hpp>
 
-string file = "medium_0";
+string file = "medium_2";
 
 vector<Individual*> pop;
 vector<Individual*> nextPop;
@@ -35,9 +36,8 @@ std::mt19937 engine(time(0));
 
 void GA::start(bool isTime, int limitation)
 {
-    ofstream statsFile;
-    string fileName = file+" "+to_string(popSize)+" "+to_string(tournamentSize)+" "+to_string(proportion)+" "+to_string(mutation_chance)+" "+to_string(time(nullptr))+".csv";
-    statsFile.open (fileName);
+    string fileName = file+" GA "+to_string(popSize)+" "+to_string(tournamentSize)+" "+to_string(proportion)+" "+to_string(mutation_chance);
+    Logger logger(fileName);
 
     time_t endTime = time(nullptr)+limitation;
 
@@ -130,9 +130,9 @@ void GA::start(bool isTime, int limitation)
         }
 
         //string output = boost::format("%.2f,%.2f,%.2f\n", best->getFitness(), worst->getFitness(), average/pop.size());
-        string output = to_string(int(best->getFitness()))+","+to_string(int(worst->getFitness()))+","+to_string(int(average/pop.size()))+"\n";
-        cout << output;
-        statsFile << output;
+        string output = to_string(int(best->getFitness()))+","+to_string(int(worst->getFitness()))+","+to_string(int(average/pop.size()));
+        cout << output << endl;
+        logger.writeLine(output);
         //printIndividual(best);
 
         if (!isTime && ++generationCount == limitation )
@@ -145,8 +145,7 @@ void GA::start(bool isTime, int limitation)
 
     }
 
-    statsFile.close();
-
+    logger.save();
 }
 
 void GA::loadData(string path)
@@ -544,11 +543,64 @@ Individual* GA::getNeighbour(Individual* ind) {
     return res;
 }
 
+
+
+
 GA::GA() {
     loadData("../ttp_student/"+file+".ttp");
 
     printf("Dimensions: %d, Items: %d, Knapsack Capacity: %d, Min Speed: %.2f, Max Speed: %.2f, Renting ratio: %.2f\n",
            data.nodesCount, data.itemsCount, data.knapsackCapacity, data.minSpeed, data.maxSpeed, data.rentRatio);
+}
+
+void GA::startAnealing(int neighbours, int generations) {
+    string fileName = file+" Annealing "+to_string(neighbours);
+    Logger logger(fileName);
+
+    Individual* current = generateGenome();
+    Individual* best = current;
+    calcFitness(current);
+    float temp = 100000;
+
+    while (temp > 0.5)
+    {
+        for (int jj = 0; jj < neighbours; jj++)
+        {
+            Individual* neighbour = getNeighbour(current);
+
+            if (neighbour->getFitness() < current->getFitness())
+            {
+                current = neighbour;
+            } else
+            {
+                float difference = neighbour->getFitness() - current->getFitness();
+                //double probability = 1/(1 + exp( (difference / temp) ));
+                double probability = (exp( -(difference / temp) ));
+                float random = getRandomFloat(0,1);
+
+                /*
+                cout << "Probab " << probability;
+                printf(" neigh: %.2f curr %.2f ",neighbour->getFitness(), current->getFitness());
+                printf(" diff %.2f temp %.2f \n", difference, temp);
+                */
+                if (random < probability)
+                    current = neighbour;
+            }
+
+            temp *= 0.995;
+            if (current->getFitness() < best->getFitness())
+            {
+                best = current;
+            }
+
+            //printf("%.2f\t%.2f\n", current->getFitness(), temp);
+            string log = to_string(current->getFitness())+','+ to_string(best->getFitness()) +','+to_string(temp);
+            logger.writeLine(log);
+        }
+    }
+
+
+    logger.save();
 }
 
 
