@@ -574,15 +574,8 @@ void GA::startAnealing(int neighbours, int generations) {
             } else
             {
                 float difference = neighbour->getFitness() - current->getFitness();
-                //double probability = 1/(1 + exp( (difference / temp) ));
                 double probability = (exp( -(difference / temp) ));
                 float random = getRandomFloat(0,1);
-
-                /*
-                cout << "Probab " << probability;
-                printf(" neigh: %.2f curr %.2f ",neighbour->getFitness(), current->getFitness());
-                printf(" diff %.2f temp %.2f \n", difference, temp);
-                */
                 if (random < probability)
                     current = neighbour;
             }
@@ -593,13 +586,10 @@ void GA::startAnealing(int neighbours, int generations) {
                 best = current;
             }
 
-            //printf("%.2f\t%.2f\n", current->getFitness(), temp);
             string log = to_string(current->getFitness())+','+ to_string(best->getFitness()) +','+to_string(temp);
             logger.writeLine(log);
         }
     }
-
-
     logger.save();
 }
 
